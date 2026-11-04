@@ -21,6 +21,16 @@ Run the application:
 ./mvnw spring-boot:run
 ```
 
+Frontend (React, in `frontend/`):
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+Then open `http://localhost:5173`.
+
 Swagger UI:
 
 ```text
