@@ -3,16 +3,21 @@ package com.serviceflow.config;
 import static org.hamcrest.Matchers.containsString;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.serviceflow.auth.AuthController;
+import com.serviceflow.auth.AuthService;
 import com.serviceflow.auth.JwtTokenService;
+import com.serviceflow.auth.LoginResponse;
 import com.serviceflow.customer.CustomerController;
 import com.serviceflow.customer.CustomerService;
 import com.serviceflow.customer.CustomerTimelineService;
 import com.serviceflow.user.AppUser;
+import com.serviceflow.user.AppUserRepository;
 import com.serviceflow.user.UserRole;
 import java.time.Duration;
 import org.junit.jupiter.api.Test;
@@ -21,6 +26,7 @@ import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.dao.InvalidDataAccessApiUsageException;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.oauth2.jwt.JwtEncoder;
@@ -28,7 +34,7 @@ import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
-@WebMvcTest(CustomerController.class)
+@WebMvcTest({CustomerController.class, AuthController.class})
 @Import(SecurityConfig.class)
 @TestPropertySource(properties = {
         "serviceflow.jwt.secret=test-secret-that-is-long-enough-for-hs256",
@@ -51,6 +57,12 @@ class SecurityErrorResponsesTest {
     @MockitoBean
     private UserDetailsService userDetailsService;
 
+    @MockitoBean
+    private AuthService authService;
+
+    @MockitoBean
+    private AppUserRepository appUserRepository;
+
     @Test
     void missingTokenReturnsJsonUnauthorized() throws Exception {
         mockMvc.perform(get("/api/customers/1"))
@@ -66,6 +78,18 @@ class SecurityErrorResponsesTest {
         mockMvc.perform(get("/api/customers/1").header(HttpHeaders.AUTHORIZATION, "Bearer not-a-real-token"))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.message").value("Access token is invalid or expired"));
+    }
+
+    @Test
+    void loginIgnoresStaleToken() throws Exception {
+        when(authService.login(any())).thenReturn(new LoginResponse("new-token", "Bearer", null, null));
+
+        mockMvc.perform(post("/api/auth/login")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer stale-token")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"email\":\"admin@serviceflow.local\",\"password\":\"password123\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.accessToken").value("new-token"));
     }
 
     @Test

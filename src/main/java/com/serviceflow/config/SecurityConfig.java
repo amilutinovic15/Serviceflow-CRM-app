@@ -34,6 +34,8 @@ import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.security.oauth2.jwt.NimbusJwtEncoder;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.security.oauth2.server.resource.web.BearerTokenAuthenticationEntryPoint;
+import org.springframework.security.oauth2.server.resource.web.BearerTokenResolver;
+import org.springframework.security.oauth2.server.resource.web.DefaultBearerTokenResolver;
 import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.access.AccessDeniedHandler;
 import org.springframework.security.web.SecurityFilterChain;
@@ -46,6 +48,7 @@ import org.springframework.web.servlet.HandlerExceptionResolver;
 public class SecurityConfig {
 
     private static final int MIN_SECRET_BYTES = 32;
+    private static final String LOGIN_PATH = "/api/auth/login";
 
     @Bean
     SecurityFilterChain securityFilterChain(
@@ -63,7 +66,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(
                                 "/api/auth/register",
-                                "/api/auth/login",
+                                LOGIN_PATH,
                                 "/swagger-ui.html",
                                 "/swagger-ui/**",
                                 "/v3/api-docs/**"
@@ -75,6 +78,7 @@ public class SecurityConfig {
                 .oauth2ResourceServer(oauth2 -> oauth2
                         .authenticationEntryPoint(authenticationEntryPoint)
                         .accessDeniedHandler(accessDeniedHandler)
+                        .bearerTokenResolver(ignoreTokenOnLogin())
                         .jwt(jwt -> jwt.jwtAuthenticationConverter(currentUserConverter(userDetailsService))))
                 .exceptionHandling(exceptions -> exceptions
                         .authenticationEntryPoint(authenticationEntryPoint)
@@ -133,6 +137,15 @@ public class SecurityConfig {
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/api/**", configuration);
         return source;
+    }
+
+    // A stale token sent along with a login request (e.g. saved in Swagger) must not block getting a new one.
+    private BearerTokenResolver ignoreTokenOnLogin() {
+        DefaultBearerTokenResolver defaultResolver = new DefaultBearerTokenResolver();
+        return request -> {
+            String path = request.getRequestURI().substring(request.getContextPath().length());
+            return LOGIN_PATH.equals(path) ? null : defaultResolver.resolve(request);
+        };
     }
 
     // Security filter errors happen before MVC, so they are routed to GlobalExceptionHandler to get the same ApiError body.
