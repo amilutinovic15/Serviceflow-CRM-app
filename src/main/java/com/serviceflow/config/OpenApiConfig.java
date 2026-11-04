@@ -13,17 +13,24 @@ public class OpenApiConfig {
 
     @Bean
     OpenAPI serviceFlowOpenApi() {
-        String securitySchemeName = "bearerAuth";
+        String basicSchemeName = "basicAuth";
+        String bearerSchemeName = "bearerAuth";
 
+        // Two separate requirements mean either scheme is accepted.
         return new OpenAPI()
                 .info(new Info()
                         .title("ServiceFlow API")
                         .version("0.0.1")
                         .description("Mini CRM and invoicing API for small service businesses"))
-                .addSecurityItem(new SecurityRequirement().addList(securitySchemeName))
+                .addSecurityItem(new SecurityRequirement().addList(basicSchemeName))
+                .addSecurityItem(new SecurityRequirement().addList(bearerSchemeName))
                 .components(new Components()
-                        .addSecuritySchemes(securitySchemeName, new SecurityScheme()
-                                .name(securitySchemeName)
+                        .addSecuritySchemes(basicSchemeName, new SecurityScheme()
+                                .name(basicSchemeName)
+                                .type(SecurityScheme.Type.HTTP)
+                                .scheme("basic"))
+                        .addSecuritySchemes(bearerSchemeName, new SecurityScheme()
+                                .name(bearerSchemeName)
                                 .type(SecurityScheme.Type.HTTP)
                                 .scheme("bearer")
                                 .bearerFormat("JWT")));

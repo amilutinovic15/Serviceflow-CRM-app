@@ -75,6 +75,8 @@ public class SecurityConfig {
                         .requestMatchers("/api/**").authenticated()
                         .anyRequest().permitAll()
                 )
+                // Basic Auth for Swagger and manual testing; the frontend uses Bearer tokens from /api/auth/login.
+                .httpBasic(basic -> basic.authenticationEntryPoint(authenticationEntryPoint))
                 .oauth2ResourceServer(oauth2 -> oauth2
                         .authenticationEntryPoint(authenticationEntryPoint)
                         .accessDeniedHandler(accessDeniedHandler)

@@ -69,12 +69,21 @@ Example login:
 }
 ```
 
-The login response contains `accessToken`, `tokenType`, `expiresAt` and the current `user`.
-Send the token on every `/api/**` request:
+`/api/**` endpoints accept either Basic Auth (simplest for Swagger and manual testing):
+
+```text
+Username: admin@serviceflow.local
+Password: password123
+```
+
+or a Bearer token (used by the frontend). The login response contains `accessToken`, `tokenType`, `expiresAt`
+and the current `user`:
 
 ```text
 Authorization: Bearer <accessToken>
 ```
+
+In Swagger, click **Authorize** and fill in either `basicAuth` or `bearerAuth`.
 
 Disabled users and role changes take effect immediately, even for tokens that have not expired yet.
 

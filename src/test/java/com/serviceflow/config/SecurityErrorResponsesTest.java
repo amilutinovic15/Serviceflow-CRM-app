@@ -3,6 +3,7 @@ package com.serviceflow.config;
 import static org.hamcrest.Matchers.containsString;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.httpBasic;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
@@ -29,6 +30,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.oauth2.jwt.JwtEncoder;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -78,6 +80,20 @@ class SecurityErrorResponsesTest {
         mockMvc.perform(get("/api/customers/1").header(HttpHeaders.AUTHORIZATION, "Bearer not-a-real-token"))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.message").value("Access token is invalid or expired"));
+    }
+
+    @Test
+    void basicAuthIsAccepted() throws Exception {
+        when(userDetailsService.loadUserByUsername("admin@serviceflow.local")).thenReturn(User.withUsername("admin@serviceflow.local")
+                .password(new BCryptPasswordEncoder().encode("password123"))
+                .roles(UserRole.ADMIN.name())
+                .build());
+
+        mockMvc.perform(get("/api/customers/1").with(httpBasic("admin@serviceflow.local", "password123")))
+                .andExpect(status().isOk());
+        mockMvc.perform(get("/api/customers/1").with(httpBasic("admin@serviceflow.local", "wrong-password")))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.message").value("Invalid email or password"));
     }
 
     @Test
