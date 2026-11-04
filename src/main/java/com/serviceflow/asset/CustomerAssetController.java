@@ -3,7 +3,6 @@ package com.serviceflow.asset;
 import jakarta.validation.Valid;
 import java.net.URI;
 import java.util.List;
-import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -33,7 +32,7 @@ public class CustomerAssetController {
     public Page<CustomerAssetResponse> findAll(
             @RequestParam(required = false) Long customerId,
             @RequestParam(required = false) String search,
-            @ParameterObject @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable
+            @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable
     ) {
         return customerAssetService.findAll(customerId, search, pageable);
     }

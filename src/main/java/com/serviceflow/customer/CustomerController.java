@@ -2,7 +2,6 @@ package com.serviceflow.customer;
 
 import jakarta.validation.Valid;
 import java.net.URI;
-import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -33,7 +32,7 @@ public class CustomerController {
     @GetMapping
     public Page<CustomerResponse> findAll(
             @RequestParam(required = false) String search,
-            @ParameterObject @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable
+            @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable
     ) {
         return customerService.findAll(search, pageable);
     }

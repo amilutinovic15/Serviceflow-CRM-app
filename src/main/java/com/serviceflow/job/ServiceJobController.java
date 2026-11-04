@@ -4,7 +4,6 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import java.net.URI;
 import java.util.List;
-import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -41,7 +40,7 @@ public class ServiceJobController {
             @RequestParam(required = false) ServiceJobStatus status,
             @RequestParam(required = false) ServiceJobPriority priority,
             @RequestParam(required = false) Long assigneeId,
-            @ParameterObject @PageableDefault(size = 20, sort = "scheduledAt", direction = Sort.Direction.DESC) Pageable pageable
+            @PageableDefault(size = 20, sort = "scheduledAt", direction = Sort.Direction.DESC) Pageable pageable
     ) {
         return serviceJobService.findAll(customerId, status, priority, assigneeId, pageable);
     }

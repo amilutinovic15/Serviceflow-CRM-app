@@ -21,33 +21,21 @@ Run the application:
 ./mvnw spring-boot:run
 ```
 
-Frontend (React, in `frontend/`):
-
-```bash
-cd frontend
-npm install
-npm run dev
-```
-
-Then open `http://localhost:5173`.
-
 Swagger UI:
 
 ```text
 http://localhost:8080/swagger-ui.html
 ```
 
-## Authentication
+## First API slice
+
+Authentication endpoint:
 
 ```text
 POST /api/auth/register
-POST /api/auth/login
 GET  /api/auth/me
 POST /api/auth/change-password
 ```
-
-The first registered user is always created as `ADMIN` and registration is public only while there are no users.
-After that, only an authenticated `ADMIN` can register new users (with `STAFF` as the default role).
 
 Example registration:
 
@@ -60,33 +48,6 @@ Example registration:
 }
 ```
 
-Example login:
-
-```json
-{
-  "email": "admin@serviceflow.local",
-  "password": "password123"
-}
-```
-
-`/api/**` endpoints accept either Basic Auth (simplest for Swagger and manual testing):
-
-```text
-Username: admin@serviceflow.local
-Password: password123
-```
-
-or a Bearer token (used by the frontend). The login response contains `accessToken`, `tokenType`, `expiresAt`
-and the current `user`:
-
-```text
-Authorization: Bearer <accessToken>
-```
-
-In Swagger, click **Authorize** and fill in either `basicAuth` or `bearerAuth`.
-
-Disabled users and role changes take effect immediately, even for tokens that have not expired yet.
-
 Example password change:
 
 ```json
@@ -96,33 +57,12 @@ Example password change:
 }
 ```
 
-Security configuration:
+After registration, use Basic Auth for `/api/**` endpoints:
 
 ```text
-SERVICEFLOW_JWT_SECRET=<at least 32 characters, required in production>
-SERVICEFLOW_JWT_EXPIRATION=PT8H
-SERVICEFLOW_CORS_ALLOWED_ORIGINS=http://localhost:5173
+Username: admin@serviceflow.local
+Password: password123
 ```
-
-`SERVICEFLOW_CORS_ALLOWED_ORIGINS` accepts a comma-separated list.
-
-## Errors
-
-All errors use the same JSON shape:
-
-```json
-{
-  "timestamp": "2026-06-01T10:00:00Z",
-  "status": 409,
-  "error": "Conflict",
-  "message": "Operation conflicts with related or duplicate data",
-  "path": "/api/customers/1",
-  "fieldErrors": {}
-}
-```
-
-`400` validation and malformed input, `401` invalid login or missing token, `403` missing permission,
-`404` missing resource, `409` related or duplicate data (for example deleting a customer that has jobs or invoices).
 
 Users endpoint:
 

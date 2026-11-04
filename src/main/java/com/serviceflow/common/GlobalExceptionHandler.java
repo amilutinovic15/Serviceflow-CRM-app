@@ -4,30 +4,14 @@ import jakarta.servlet.http.HttpServletRequest;
 import java.time.Instant;
 import java.util.Map;
 import java.util.stream.Collectors;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.dao.DataIntegrityViolationException;
-import org.springframework.dao.InvalidDataAccessApiUsageException;
-import org.springframework.data.core.PropertyReferenceException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.http.converter.HttpMessageNotReadableException;
-import org.springframework.security.access.AccessDeniedException;
-import org.springframework.security.authentication.BadCredentialsException;
-import org.springframework.security.authentication.DisabledException;
-import org.springframework.security.core.AuthenticationException;
-import org.springframework.security.oauth2.core.OAuth2AuthenticationException;
-import org.springframework.web.ErrorResponse;
 import org.springframework.web.bind.MethodArgumentNotValidException;
-import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
-import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
-
-    private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
     @ExceptionHandler(NotFoundException.class)
     ResponseEntity<ApiError> handleNotFound(NotFoundException exception, HttpServletRequest request) {
@@ -51,87 +35,6 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(IllegalArgumentException.class)
     ResponseEntity<ApiError> handleBadRequest(IllegalArgumentException exception, HttpServletRequest request) {
         return buildError(HttpStatus.BAD_REQUEST, exception.getMessage(), request, Map.of());
-    }
-
-    @ExceptionHandler(HttpMessageNotReadableException.class)
-    ResponseEntity<ApiError> handleUnreadableBody(HttpMessageNotReadableException exception, HttpServletRequest request) {
-        return buildError(HttpStatus.BAD_REQUEST, "Request body is missing or malformed", request, Map.of());
-    }
-
-    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
-    ResponseEntity<ApiError> handleTypeMismatch(MethodArgumentTypeMismatchException exception, HttpServletRequest request) {
-        String message = "Invalid value '%s' for parameter '%s'".formatted(exception.getValue(), exception.getName());
-        return buildError(HttpStatus.BAD_REQUEST, message, request, Map.of());
-    }
-
-    @ExceptionHandler(MissingServletRequestParameterException.class)
-    ResponseEntity<ApiError> handleMissingParameter(MissingServletRequestParameterException exception, HttpServletRequest request) {
-        String message = "Required parameter '%s' is missing".formatted(exception.getParameterName());
-        return buildError(HttpStatus.BAD_REQUEST, message, request, Map.of());
-    }
-
-    @ExceptionHandler(AuthenticationException.class)
-    ResponseEntity<ApiError> handleAuthentication(AuthenticationException exception, HttpServletRequest request) {
-        String message = switch (exception) {
-            case DisabledException disabled -> "User account is disabled";
-            case BadCredentialsException badCredentials -> "Invalid email or password";
-            case OAuth2AuthenticationException invalidToken -> "Access token is invalid or expired";
-            default -> "Authentication is required";
-        };
-        return buildError(HttpStatus.UNAUTHORIZED, message, request, Map.of());
-    }
-
-    @ExceptionHandler(AccessDeniedException.class)
-    ResponseEntity<ApiError> handleAccessDenied(AccessDeniedException exception, HttpServletRequest request) {
-        return buildError(HttpStatus.FORBIDDEN, exception.getMessage(), request, Map.of());
-    }
-
-    @ExceptionHandler(PropertyReferenceException.class)
-    ResponseEntity<ApiError> handleUnknownProperty(PropertyReferenceException exception, HttpServletRequest request) {
-        return buildError(HttpStatus.BAD_REQUEST, unknownSortMessage(exception.getPropertyName()), request, Map.of());
-    }
-
-    // An unknown sort field inside a @Query repository method surfaces as a JPA usage error rather than PropertyReferenceException.
-    @ExceptionHandler(InvalidDataAccessApiUsageException.class)
-    ResponseEntity<ApiError> handleInvalidDataAccess(InvalidDataAccessApiUsageException exception, HttpServletRequest request) {
-        if (exception.getCause() instanceof PropertyReferenceException propertyException) {
-            return handleUnknownProperty(propertyException, request);
-        }
-
-        String[] sort = request.getParameterValues("sort");
-        if (sort != null) {
-            return buildError(HttpStatus.BAD_REQUEST, unknownSortMessage(String.join(";", sort)), request, Map.of());
-        }
-
-        log.error("Invalid data access on {}", request.getRequestURI(), exception);
-        return buildError(HttpStatus.INTERNAL_SERVER_ERROR, "Unexpected server error", request, Map.of());
-    }
-
-    @ExceptionHandler(DataIntegrityViolationException.class)
-    ResponseEntity<ApiError> handleDataIntegrity(DataIntegrityViolationException exception, HttpServletRequest request) {
-        log.warn("Data integrity violation on {}: {}", request.getRequestURI(), exception.getMostSpecificCause().getMessage());
-        return buildError(
-                HttpStatus.CONFLICT,
-                "Operation conflicts with related or duplicate data",
-                request,
-                Map.of()
-        );
-    }
-
-    @ExceptionHandler(Exception.class)
-    ResponseEntity<ApiError> handleUnexpected(Exception exception, HttpServletRequest request) {
-        // Spring's own web exceptions (404 for unknown paths, 405, 415...) carry their status.
-        if (exception instanceof ErrorResponse errorResponse) {
-            HttpStatus status = HttpStatus.valueOf(errorResponse.getStatusCode().value());
-            return buildError(status, status.getReasonPhrase(), request, Map.of());
-        }
-
-        log.error("Unexpected error on {}", request.getRequestURI(), exception);
-        return buildError(HttpStatus.INTERNAL_SERVER_ERROR, "Unexpected server error", request, Map.of());
-    }
-
-    private String unknownSortMessage(String property) {
-        return "Invalid sort parameter '%s'. Use a field name with optional direction, e.g. createdAt,desc".formatted(property);
     }
 
     private ResponseEntity<ApiError> buildError(

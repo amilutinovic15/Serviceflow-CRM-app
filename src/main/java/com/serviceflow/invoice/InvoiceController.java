@@ -3,7 +3,6 @@ package com.serviceflow.invoice;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import java.net.URI;
-import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -46,7 +45,7 @@ public class InvoiceController {
     public Page<InvoiceResponse> findAll(
             @RequestParam(required = false) Long customerId,
             @RequestParam(required = false) InvoiceStatus status,
-            @ParameterObject @PageableDefault(size = 20, sort = "issuedAt", direction = Sort.Direction.DESC) Pageable pageable
+            @PageableDefault(size = 20, sort = "issuedAt", direction = Sort.Direction.DESC) Pageable pageable
     ) {
         return invoiceService.findAll(customerId, status, pageable);
     }

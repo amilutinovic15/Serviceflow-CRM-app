@@ -2,7 +2,6 @@ package com.serviceflow.catalog;
 
 import jakarta.validation.Valid;
 import java.net.URI;
-import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -33,7 +32,7 @@ public class ServiceCatalogItemController {
     public Page<ServiceCatalogItemResponse> findAll(
             @RequestParam(required = false) String search,
             @RequestParam(required = false) Boolean active,
-            @ParameterObject @PageableDefault(size = 20, sort = "name", direction = Sort.Direction.ASC) Pageable pageable
+            @PageableDefault(size = 20, sort = "name", direction = Sort.Direction.ASC) Pageable pageable
     ) {
         return serviceCatalogItemService.findAll(search, active, pageable);
     }

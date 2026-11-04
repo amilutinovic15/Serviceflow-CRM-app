@@ -2,7 +2,6 @@ package com.serviceflow.auth;
 
 import com.serviceflow.user.AppUser;
 import com.serviceflow.user.AppUserRepository;
-import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import jakarta.validation.Valid;
 import java.net.URI;
 import org.springframework.http.ResponseEntity;
@@ -31,12 +30,6 @@ public class AuthController {
         return ResponseEntity
                 .created(URI.create("/api/users/" + response.id()))
                 .body(response);
-    }
-
-    @PostMapping("/login")
-    @SecurityRequirements
-    public LoginResponse login(@Valid @RequestBody LoginRequest request) {
-        return authService.login(request);
     }
 
     @GetMapping("/me")
