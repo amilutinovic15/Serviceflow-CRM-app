@@ -1,0 +1,13 @@
+CREATE TABLE customers (
+    id BIGINT NOT NULL AUTO_INCREMENT,
+    full_name VARCHAR(120) NOT NULL,
+    email VARCHAR(160),
+    phone VARCHAR(40),
+    company_name VARCHAR(120),
+    address VARCHAR(255),
+    notes TEXT,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    CONSTRAINT uq_customers_email UNIQUE (email)
+);
