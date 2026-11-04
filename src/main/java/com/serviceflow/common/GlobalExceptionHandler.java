@@ -7,12 +7,16 @@ import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.dao.InvalidDataAccessApiUsageException;
+import org.springframework.data.core.PropertyReferenceException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.DisabledException;
 import org.springframework.security.core.AuthenticationException;
+import org.springframework.security.oauth2.core.OAuth2AuthenticationException;
 import org.springframework.web.ErrorResponse;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
@@ -68,15 +72,39 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(AuthenticationException.class)
     ResponseEntity<ApiError> handleAuthentication(AuthenticationException exception, HttpServletRequest request) {
-        String message = exception instanceof DisabledException
-                ? "User account is disabled"
-                : "Invalid email or password";
+        String message = switch (exception) {
+            case DisabledException disabled -> "User account is disabled";
+            case BadCredentialsException badCredentials -> "Invalid email or password";
+            case OAuth2AuthenticationException invalidToken -> "Access token is invalid or expired";
+            default -> "Authentication is required";
+        };
         return buildError(HttpStatus.UNAUTHORIZED, message, request, Map.of());
     }
 
     @ExceptionHandler(AccessDeniedException.class)
     ResponseEntity<ApiError> handleAccessDenied(AccessDeniedException exception, HttpServletRequest request) {
         return buildError(HttpStatus.FORBIDDEN, exception.getMessage(), request, Map.of());
+    }
+
+    @ExceptionHandler(PropertyReferenceException.class)
+    ResponseEntity<ApiError> handleUnknownProperty(PropertyReferenceException exception, HttpServletRequest request) {
+        return buildError(HttpStatus.BAD_REQUEST, unknownSortMessage(exception.getPropertyName()), request, Map.of());
+    }
+
+    // An unknown sort field inside a @Query repository method surfaces as a JPA usage error rather than PropertyReferenceException.
+    @ExceptionHandler(InvalidDataAccessApiUsageException.class)
+    ResponseEntity<ApiError> handleInvalidDataAccess(InvalidDataAccessApiUsageException exception, HttpServletRequest request) {
+        if (exception.getCause() instanceof PropertyReferenceException propertyException) {
+            return handleUnknownProperty(propertyException, request);
+        }
+
+        String[] sort = request.getParameterValues("sort");
+        if (sort != null) {
+            return buildError(HttpStatus.BAD_REQUEST, unknownSortMessage(String.join(";", sort)), request, Map.of());
+        }
+
+        log.error("Invalid data access on {}", request.getRequestURI(), exception);
+        return buildError(HttpStatus.INTERNAL_SERVER_ERROR, "Unexpected server error", request, Map.of());
     }
 
     @ExceptionHandler(DataIntegrityViolationException.class)
@@ -100,6 +128,10 @@ public class GlobalExceptionHandler {
 
         log.error("Unexpected error on {}", request.getRequestURI(), exception);
         return buildError(HttpStatus.INTERNAL_SERVER_ERROR, "Unexpected server error", request, Map.of());
+    }
+
+    private String unknownSortMessage(String property) {
+        return "Invalid sort parameter '%s'. Use a field name with optional direction, e.g. createdAt,desc".formatted(property);
     }
 
     private ResponseEntity<ApiError> buildError(
